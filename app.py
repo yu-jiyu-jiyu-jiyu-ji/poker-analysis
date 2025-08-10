@@ -64,7 +64,7 @@ label { font-size: .95rem; }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("ハンド解析")
+st.title("Aハンド解析")
 
 # ==== 共通関数 ====
 def selectable_cards(exclude=set()):
