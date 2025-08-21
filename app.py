@@ -20,6 +20,59 @@ POS_ALL = ["UTG", "HJ", "CO", "BTN", "SB", "BB"]
 ACTIONS_PRE = ["open", "limp", "call", "fold", "3bet", "4bet", "shove", "check"]
 ACTIONS_POST = ["bet", "check", "call", "raise", "fold", "shove"]
 
+# ===== GPT 呼び出し 最小実装 =====
+import os
+try:
+    from openai import OpenAI
+    _gpt = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+except Exception as _e:
+    _gpt = None
+
+def call_gpt(level: str, hero_cards: list[str], board: list[str], villains: list[dict], flow_text: str) -> str:
+    """UIで集めた情報から一回だけ回答を生成（ストリーミングなしの最小版）"""
+    if not _gpt or not os.environ.get("OPENAI_API_KEY"):
+        return "⚠️ OPENAI_API_KEY が設定されていません（Render の Environment に追加してください）"
+
+    # --- プロンプト（最小） ---
+    sys = {
+        "初級": "あなたは初心者向けのポーカーコーチ。専門用語を避け、簡潔に。",
+        "中級": "あなたは中級者向けコーチ。レンジ/ポジション/ベットサイズの意図を具体的に。",
+        "上級(近似)": "あなたはGTO的思考手順を近似で説明する上級コーチ。バランス/混合戦略を踏まえて。"
+    }.get(level, "あなたはポーカーコーチ。")
+
+    vtext = "\n".join([f"- {v['pos']}: {v['type']}" for v in villains]) or "（未指定）"
+    btext = " ".join([c for c in board if c]) or "（未指定）"
+    user = f"""ハンド解説依頼
+難易度: {level}
+
+# ハンド
+Hero: {hero_cards[0]} {hero_cards[1]}
+
+# ボード
+{btext}
+
+# 相手タイプ
+{vtext}
+
+# 流れ
+{flow_text}
+
+# 出力フォーマット
+- 最初に結論（1〜3行）
+- 各ストリートの方針とベットサイズ指針（プリ 2.2/3bb、ポスト 33/66/100/AI）
+- 想定レンジ（相手/自分）と主要ハンド例
+- よくあるミスと修正ポイント
+"""
+
+    try:
+        resp = _gpt.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=float(os.environ.get("OPENAI_TEMPERATURE", "0.3")),
+            messages=[{"role":"system","content":sys},{"role":"user","content":user}],
+        )
+        return resp.choices[0].message.content or "（空の応答）"
+    except Exception as e:
+        return f"LLM呼び出しエラー: {e}"
 
 def gen_cards() -> list[str]:
     """カード一覧 ["A♠","A♣",...,"K♥"] をスート→ランク順で生成"""
@@ -376,14 +429,23 @@ def build_flow_text() -> str:
 
 # 解析を実行（ここではモックでメッセージを詰めるだけ）
 if st.button("解析する", use_container_width=True):
-    st.session_state.messages.append({"role": "user", "content": "解析してください"})
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": f"【{level}の視点】UI整形OK。流れ: \n{build_flow_text()}",
-        }
+    # 既存の build_flow_text() を再利用
+    flow_text = build_flow_text()
+
+    # 解析を実行（APIコール）
+    answer = call_gpt(
+        level=level,
+        hero_cards=[hero_c1, hero_c2],
+        board=[flop_1, flop_2, flop_3, turn, river],
+        villains=st.session_state.villains,
+        flow_text=flow_text
     )
-    st.session_state.show_chat = True  # 解析後にチャットセクションを開放
+
+    # チャットUIは解析後にだけ開く仕様
+    st.session_state.show_chat = True
+    st.session_state.messages.append({"role":"user","content":"解析してください"})
+    st.session_state.messages.append({"role":"assistant","content":answer})
+
 
 st.divider()
 
