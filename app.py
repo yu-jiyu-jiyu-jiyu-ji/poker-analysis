@@ -459,14 +459,16 @@ if st.session_state.show_chat:
     if q := st.chat_input("質問を入力…"):
     st.session_state.messages.append({"role": "user", "content": q})
     with st.spinner("考え中です..."):
-        answer = call_gpt(
-            level=level,
-            hero_cards=[hero_c1, hero_c2],
-            board=[flop_1, flop_2, flop_3, turn, river],
-            villains=st.session_state.villains,
-            flow_text=build_flow_text() + f"\n\n追加質問: {q}"
+        resp = _gpt.chat.completions.create(
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=float(os.environ.get("OPENAI_TEMPERATURE", "0.3")),
+            messages=[
+                {"role":"system","content":"あなたはポーカーコーチです。"},
+                *st.session_state.messages  # ← 過去の会話全部を送る
+            ],
         )
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        answer = resp.choices[0].message.content
+    st.session_state.messages.append({"role":"assistant","content":answer})
 
 
 
