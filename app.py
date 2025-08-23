@@ -29,7 +29,7 @@ except Exception as _e:
     _gpt = None
 
 def call_gpt(level: str, hero_cards: list[str], board: list[str], villains: list[dict], flow_text: str) -> str:
-    """UIで集めた情報から一回だけ回答を生成（ストリーミングなしの最小版）"""
+    """ UIで集めた情報から一回だけ回答を生成（ストリーミングなしの最小版）"""
     if not _gpt or not os.environ.get("OPENAI_API_KEY"):
         return "⚠️ OPENAI_API_KEY が設定されていません（Render の Environment に追加してください）"
 
