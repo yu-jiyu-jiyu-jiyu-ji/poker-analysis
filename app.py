@@ -457,7 +457,15 @@ if st.session_state.show_chat:
             st.markdown(m["content"])
     # ユーザー入力（今はモック応答）
     if q := st.chat_input("質問を入力…"):
-        st.session_state.messages.append({"role": "user", "content": q})
-        st.session_state.messages.append(
-            {"role": "assistant", "content": "（モック）LLM接続は後でONにします。"}
+    st.session_state.messages.append({"role": "user", "content": q})
+    with st.spinner("考え中です..."):
+        answer = call_gpt(
+            level=level,
+            hero_cards=[hero_c1, hero_c2],
+            board=[flop_1, flop_2, flop_3, turn, river],
+            villains=st.session_state.villains,
+            flow_text=build_flow_text() + f"\n\n追加質問: {q}"
         )
+    st.session_state.messages.append({"role": "assistant", "content": answer})
+
+
