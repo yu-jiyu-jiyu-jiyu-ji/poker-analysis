@@ -457,16 +457,16 @@ if st.session_state.show_chat:
             st.markdown(m["content"])
     # ユーザー入力（今はモック応答）
     if q := st.chat_input("質問を入力…"):
-    st.session_state.messages.append({"role": "user", "content": q})
-    with st.spinner("考え中です..."):
-        resp = _gpt.chat.completions.create(
-            model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
-            temperature=float(os.environ.get("OPENAI_TEMPERATURE", "0.3")),
-            messages=[
-                {"role":"system","content":"あなたはポーカーコーチです。"},
-                *st.session_state.messages  # ← 過去の会話全部を送る
-            ],
-        )
+        st.session_state.messages.append({"role": "user", "content": q})
+        with st.spinner("考え中です..."):
+            resp = _gpt.chat.completions.create(
+                model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+                temperature=float(os.environ.get("OPENAI_TEMPERATURE", "0.3")),
+                messages=[
+                    {"role":"system","content":"あなたはポーカーコーチです。"},
+                    *st.session_state.messages  # ← 過去の会話全部を送る
+                ],
+            )
         answer = resp.choices[0].message.content
     st.session_state.messages.append({"role":"assistant","content":answer})
 
